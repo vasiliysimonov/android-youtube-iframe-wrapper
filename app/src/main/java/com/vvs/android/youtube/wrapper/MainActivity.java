@@ -15,6 +15,10 @@ import android.widget.MediaController;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -131,10 +135,19 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    protected void onPause() {
+        super.onPause();
+        webInterface.printStats();
+    }
+
     public class WebInterface {
 
         private CountDownLatch countDown;
         private String jsResult;
+        private Map<String, long[]> successTimes = new HashMap<>();
+        private Map<String, int[]> successCounts = new HashMap<>();
+        private Map<String, int[]> failCounts = new HashMap<>();
 
         @SuppressWarnings("unused")
         @JavascriptInterface
@@ -193,9 +206,12 @@ public class MainActivity extends AppCompatActivity {
             webView.loadUrl("javascript:AndroidCallbacks.onResult(" + code + ")");
             try {
                 if (countDown.await(1000, TimeUnit.MILLISECONDS)) {
+                    addTime(successTimes, code, t);
+                    addCount(successCounts, code);
                     Log.v(TAG, code + "=" + jsResult + " in " + (System.currentTimeMillis() - t) + "ms");
                     return jsResult;
                 } else {
+                    addCount(failCounts, code);
                     Log.v(TAG, code + " timeout");
                 }
             } catch (InterruptedException e) {
@@ -203,6 +219,40 @@ public class MainActivity extends AppCompatActivity {
             }
 
             return null;
+        }
+
+        private void addTime(Map<String, long[]> times, String method, long startTime) {
+            long t = System.currentTimeMillis() - startTime;
+            long[] time = times.get(method);
+            if (time == null) {
+                times.put(method, time = new long[]{0});
+            }
+            time[0] += t;
+        }
+
+        private void addCount(Map<String, int[]> counts, String method) {
+            int[] count = counts.get(method);
+            if (count == null) {
+                counts.put(method, count = new int[]{0});
+            }
+            count[0]++;
+        }
+
+        private void printStats() {
+            Set<String> unifiedKeys = new HashSet<>(webInterface.successCounts.keySet());
+            unifiedKeys.addAll(webInterface.failCounts.keySet());
+            for (String code : unifiedKeys) {
+                long[] times = webInterface.successTimes.get(code);
+                int[] successes = webInterface.successCounts.get(code);
+                int[] fails = webInterface.failCounts.get(code);
+                int success = successes == null ? 0 : successes[0];
+                int fail = fails == null ? 0 : fails[0];
+                long time = times == null ? 0 : times[0];
+                Log.i(TAG, code + " Nsuccess=" + success + " Nfail=" + fail + " AVGtime=" + (success == 0 ? 0 : time / (1000.0 * success)));
+            }
+            successCounts.clear();
+            successTimes.clear();
+            failCounts.clear();
         }
     }
 
