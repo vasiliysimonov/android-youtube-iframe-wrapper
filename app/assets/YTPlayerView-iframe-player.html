@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+    body { margin: 0; width:100%%; height:100%%;  background-color:#000000; }
+    html { width:100%%; height:100%%; background-color:#000000; }
+
+    .embed-container iframe,
+    .embed-container object,
+    .embed-container embed {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%% !important;
+        height: 100%% !important;
+    }
+    </style>
+</head>
+<body>
+
+    <div class="embed-container">
+        <div id="player"></div>
+    </div>
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script>
+    var player;
+    var error = false;
+
+    function onYouTubeIframeAPIReady() {
+        player = new YT.Player('player', {
+            height: '100%',
+            width: '100%',
+            videoId: '1afDwoPd_e8',
+            playerVars: {
+                autoplay: 1,
+                controls: 0,
+                showinfo: 0
+            },
+            events: {
+                'onReady' : onReady,
+                'onStateChange' : onStateChange,
+                'onPlaybackQualityChange' : onPlaybackQualityChange,
+                'onPlayerError' : onPlayerError
+            }
+        });
+    }
+
+    function onReady(event) {
+        AndroidCallbacks.onReady(event.data);
+    }
+
+    function onStateChange(event) {
+        if (!error) {
+            AndroidCallbacks.onStateChange(event.data);
+        } else {
+            error = false;
+        }
+    }
+
+    function onPlaybackQualityChange(event) {
+        AndroidCallbacks.onPlaybackQualityChange(event.data);
+    }
+
+    function onPlayerError(event) {
+        if (event.data == 100) {
+            error = true;
+        }
+        AndroidCallbacks.onError(event.data);
+    }
+
+    window.onresize = function() {
+        player.setSize(window.innerWidth, window.innerHeight);
+    }
+    </script>
+</body>
+</html>
