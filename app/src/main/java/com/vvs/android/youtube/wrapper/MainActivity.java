@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final String TAG = "WebActivity";
+    private static final String TAG = MainActivity.class.getSimpleName();
     private static final String ARG_VIDEO_ID = "arg.videoId";
     private static final String ARG_FIX_REQUEST = "arg.fix-request-id";
     private final String TAG_CHILD = "tag.youtube";
@@ -136,25 +136,6 @@ public class MainActivity extends AppCompatActivity {
         private CountDownLatch countDown;
         private String jsResult;
 
-        String callJsForResult(String code) {
-
-            countDown = new CountDownLatch(1);
-            long t = System.currentTimeMillis();
-            webView.loadUrl("javascript:AndroidCallbacks.onResult(" + code + ")");
-            try {
-                if (countDown.await(1000, TimeUnit.MILLISECONDS)) {
-                    Log.d(TAG, code + "=" + jsResult + " in " + (System.currentTimeMillis() - t) + "ms");
-                    return jsResult;
-                } else {
-                    Log.d(TAG, code + " timeout");
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-
-            return null;
-        }
-
         @SuppressWarnings("unused")
         @JavascriptInterface
         public void onResult(String data) {
@@ -204,10 +185,29 @@ public class MainActivity extends AppCompatActivity {
         public void onGetQuality(String data) {
             Log.d(TAG, "onGetQuality: " + data);
         }
+
+        private String callJsForResult(String code) {
+
+            countDown = new CountDownLatch(1);
+            long t = System.currentTimeMillis();
+            webView.loadUrl("javascript:AndroidCallbacks.onResult(" + code + ")");
+            try {
+                if (countDown.await(1000, TimeUnit.MILLISECONDS)) {
+                    Log.v(TAG, code + "=" + jsResult + " in " + (System.currentTimeMillis() - t) + "ms");
+                    return jsResult;
+                } else {
+                    Log.v(TAG, code + " timeout");
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+
+            return null;
+        }
     }
 
     private void onYoutubeStateChange(PlaybackState state) {
-        Log.d(TAG, "onStateChange: " + state + " thread: " + Thread.currentThread());
+        Log.d(TAG, "onStateChange");
         if (state == null) return;
 
         playerInterface.setState(state);
