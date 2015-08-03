@@ -35,6 +35,7 @@ public class MainActivity extends AppCompatActivity {
     private View gradientView;
     private WebInterface webInterface;
     VideoControllerView mediaController;
+    private View cover;
 
     /*public static YoutubeFragment forVideo(Uri videoUri, int fixProblemRequestId) throws RuntimeException {
         String videoId = parseVideoId(videoUri);
@@ -83,6 +84,7 @@ public class MainActivity extends AppCompatActivity {
             webView.getSettings().setMediaPlaybackRequiresUserGesture(false);
         }
         webView.getSettings().setPluginState(WebSettings.PluginState.ON);
+        //webView.getSettings().setUserAgentString("Mozilla/5.0 (iPad; CPU OS 7_0 like Mac OS X) AppleWebKit/537.51.1 (KHTML, like Gecko) Version/7.0 Mobile/11A465 Safari/9537.53");
         webInterface = new WebInterface();
         webView.addJavascriptInterface(webInterface, "AndroidCallbacks");
 
@@ -107,6 +109,18 @@ public class MainActivity extends AppCompatActivity {
                     mediaController.show();
                 }
                 return false; // TODO?
+            }
+        });
+
+        cover = findViewById(R.id.cover_view);
+        cover.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mediaController.isShowing()) {
+                    mediaController.hide();
+                } else {
+                    mediaController.show();
+                }
             }
         });
 
@@ -148,14 +162,6 @@ public class MainActivity extends AppCompatActivity {
         private Map<String, long[]> successTimes = new HashMap<>();
         private Map<String, int[]> successCounts = new HashMap<>();
         private Map<String, int[]> failCounts = new HashMap<>();
-
-        @SuppressWarnings("unused")
-        @JavascriptInterface
-        public void onResult(String data) {
-            Log.d(TAG, "JS result " + data);
-            jsResult = data;
-            countDown.countDown();
-        }
 
         @SuppressWarnings("unused")
         @JavascriptInterface
@@ -205,10 +211,10 @@ public class MainActivity extends AppCompatActivity {
             long t = System.currentTimeMillis();
             webView.loadUrl("javascript:AndroidCallbacks.onResult(" + code + ")");
             try {
-                if (countDown.await(1000, TimeUnit.MILLISECONDS)) {
+                if (countDown.await(50, TimeUnit.MILLISECONDS)) {
                     addTime(successTimes, code, t);
                     addCount(successCounts, code);
-                    Log.v(TAG, code + "=" + jsResult + " in " + (System.currentTimeMillis() - t) + "ms");
+                    //Log.v(TAG, code + "=" + jsResult + " in " + (System.currentTimeMillis() - t) + "ms");
                     return jsResult;
                 } else {
                     addCount(failCounts, code);
@@ -219,6 +225,14 @@ public class MainActivity extends AppCompatActivity {
             }
 
             return null;
+        }
+
+        @SuppressWarnings("unused")
+        @JavascriptInterface
+        public void onResult(String data) {
+            // Log.v(TAG, "JS result " + data);
+            jsResult = data;
+            countDown.countDown();
         }
 
         private void addTime(Map<String, long[]> times, String method, long startTime) {
@@ -257,8 +271,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void onYoutubeStateChange(PlaybackState state) {
-        Log.d(TAG, "onStateChange");
+        Log.d(TAG, "onStateChange " + state);
         if (state == null) return;
+
+        if (state != PlaybackState.Unstarted) {
+            cover.setVisibility(View.VISIBLE);
+        }
 
         playerInterface.setState(state);
         switch (state) {
